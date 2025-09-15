@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Test Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Generate Test Data Excel</h1>
+    <button onclick="generateExcel()">Download Test Data (100 items)</button>
+    
+    <script>
+        function generateExcel() {
+            const data = [];
+            const departments = ['IT', 'Admin', 'Accounting', 'HR', 'Sales'];
+            const locations = ['Tầng 1', 'Tầng 2', 'Tầng 3', 'Kho'];
+            const types = ['IT Equipment', 'Furniture', 'Office Supply'];
+            
+            for (let i = 1; i <= 100; i++) {
+                data.push({
+                    'Mã tài sản': `TS${String(i).padStart(3, '0')}`,
+                    'Tên tiếng Việt': `Tài sản ${i}`,
+                    'Tên tiếng Anh': `Asset ${i}`,
+                    'Loại': types[i % types.length],
+                    'Model': `Model-${2024}-${i}`,
+                    'Serial': `SN${Date.now()}${i}`,
+                    'Bộ phận': departments[i % departments.length],
+                    'Vị trí': locations[i % locations.length],
+                    'Trạng thái': 'Active',
+                    'Nhà cung cấp': `Supplier ${(i % 5) + 1}`,
+                    'Giá trị ban đầu': Math.floor(Math.random() * 50000000) + 1000000
+                });
+            }
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Assets');
+            XLSX.writeFile(wb, 'test_assets_100.xlsx');
+            
+            alert('Downloaded test_assets_100.xlsx');
+        }
+    </script>
+</body>
+</html>

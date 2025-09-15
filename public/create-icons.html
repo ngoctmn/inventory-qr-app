@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Create Icons</title>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        function createIcon(size) {
+            const canvas = document.getElementById('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(0, 0, size, size);
+
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = `${size/4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('QR', size / 2, size / 2);
+
+            // Download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}.png`;
+                a.click();
+            });
+        }
+
+        // Create all sizes
+        setTimeout(() => createIcon(96), 100);
+        setTimeout(() => createIcon(192), 500);
+        setTimeout(() => createIcon(512), 1000);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase Connection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🧪 Test Supabase Connection</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Connection Status</h2>
+            <div id="status" class="text-gray-600">Checking...</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Database Tables</h2>
+            <div id="tables" class="text-gray-600">Loading...</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Sample Assets</h2>
+            <div id="assets" class="text-gray-600">Loading...</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Test Actions</h2>
+            <button onclick="testInsert()" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">
+                Test Insert Asset
+            </button>
+            <button onclick="testCycle()" class="bg-green-500 text-white px-4 py-2 rounded mr-2">
+                Test Create Cycle
+            </button>
+            <button onclick="testFetch()" class="bg-purple-500 text-white px-4 py-2 rounded">
+                Refresh Data
+            </button>
+        </div>
+
+        <div id="log" class="mt-4 bg-gray-800 text-green-400 p-4 rounded font-mono text-sm max-h-96 overflow-y-auto"></div>
+    </div>
+
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://ptduzyyantdvfopqwlvz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHV6eXlhbnRkdmZvcHF3bHZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MzEyMzQsImV4cCI6MjA3MzQwNzIzNH0.6uXbQYBV5H4amuILjovQLIDQO6pVNQmM_P8QsLotMtA';
+        
+        // Initialize Supabase client
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Log function
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
+            logDiv.innerHTML += `<div class="${color}">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Test connection
+        async function testConnection() {
+            try {
+                log('Testing Supabase connection...');
+                
+                // Test basic query
+                const { data, error } = await supabaseClient
+                    .from('assets')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                        document.getElementById('status').innerHTML = `
+                            <div class="text-red-600 font-bold">❌ Tables not found!</div>
+                            <div class="text-sm mt-2">Please run the SQL setup script in Supabase first.</div>
+                        `;
+                        log('Error: Database tables not found. Please run setup SQL.', 'error');
+                    } else {
+                        document.getElementById('status').innerHTML = `
+                            <div class="text-orange-600">⚠️ Connection OK but error: ${error.message}</div>
+                        `;
+                        log(`Error: ${error.message}`, 'error');
+                    }
+                } else {
+                    document.getElementById('status').innerHTML = `
+                        <div class="text-green-600 font-bold">✅ Connected Successfully!</div>
+                    `;
+                    log('Connected to Supabase successfully!', 'success');
+                    
+                    // Load initial data
+                    await loadTables();
+                    await loadAssets();
+                }
+            } catch (err) {
+                document.getElementById('status').innerHTML = `
+                    <div class="text-red-600">❌ Connection Failed: ${err.message}</div>
+                `;
+                log(`Connection failed: ${err.message}`, 'error');
+            }
+        }
+        
+        // Load tables info
+        async function loadTables() {
+            try {
+                const tables = ['assets', 'inventory_cycles', 'inventory_logs', 'activity_logs'];
+                const tableInfo = [];
+                
+                for (const table of tables) {
+                    const { count, error } = await supabaseClient
+                        .from(table)
+                        .select('*', { count: 'exact', head: true });
+                    
+                    if (!error) {
+                        tableInfo.push(`✓ ${table}: ${count || 0} records`);
+                    } else {
+                        tableInfo.push(`✗ ${table}: not found`);
+                    }
+                }
+                
+                document.getElementById('tables').innerHTML = tableInfo.join('<br>');
+                log('Tables loaded successfully');
+            } catch (err) {
+                log(`Error loading tables: ${err.message}`, 'error');
+            }
+        }
+        
+        // Load sample assets
+        async function loadAssets() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('assets')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    const html = data.map(asset => `
+                        <div class="border-b pb-2 mb-2">
+                            <strong>${asset.asset_id}</strong>: ${asset.name_vi || asset.name_en || 'No name'}
+                            <span class="text-sm text-gray-500 ml-2">(${asset.department} - ${asset.location})</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('assets').innerHTML = html;
+                    log(`Loaded ${data.length} assets`);
+                } else {
+                    document.getElementById('assets').innerHTML = '<div class="text-gray-500">No assets found. Try inserting test data.</div>';
+                }
+            } catch (err) {
+                log(`Error loading assets: ${err.message}`, 'error');
+            }
+        }
+        
+        // Test insert asset
+        async function testInsert() {
+            try {
+                const testAsset = {
+                    asset_id: 'TEST' + Date.now(),
+                    name_vi: 'Tài sản test ' + new Date().toLocaleTimeString(),
+                    name_en: 'Test asset',
+                    type: 'Test',
+                    department: 'IT',
+                    location: 'Test Location',
+                    status: 'Active'
+                };
+                
+                log(`Inserting test asset: ${testAsset.asset_id}...`);
+                
+                const { data, error } = await supabaseClient
+                    .from('assets')
+                    .insert(testAsset)
+                    .select();
+                
+                if (error) throw error;
+                
+                log(`Success! Inserted asset: ${data[0].asset_id}`, 'success');
+                await loadAssets();
+            } catch (err) {
+                log(`Error inserting asset: ${err.message}`, 'error');
+            }
+        }
+        
+        // Test create cycle
+        async function testCycle() {
+            try {
+                const testCycle = {
+                    name: 'Test Cycle ' + new Date().toLocaleString(),
+                    is_active: false,
+                    total_assets: 0,
+                    checked_assets: 0
+                };
+                
+                log(`Creating test cycle...`);
+                
+                const { data, error } = await supabaseClient
+                    .from('inventory_cycles')
+                    .insert(testCycle)
+                    .select();
+                
+                if (error) throw error;
+                
+                log(`Success! Created cycle: ${data[0].name}`, 'success');
+            } catch (err) {
+                log(`Error creating cycle: ${err.message}`, 'error');
+            }
+        }
+        
+        // Refresh data
+        async function testFetch() {
+            log('Refreshing data...');
+            await loadTables();
+            await loadAssets();
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            log('Initializing Supabase test...');
+            testConnection();
+        }
+    </script>
+</body>
+</html>
