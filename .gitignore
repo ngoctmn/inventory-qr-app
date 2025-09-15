@@ -1,0 +1,15 @@
+# Node / Next.js
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+coverage/
+.env*
+npm-debug.log*
+yarn*.log
+pnpm-debug.log*
+
+# Editor/OS
+.DS_Store
